@@ -1,0 +1,19 @@
+#These are the old dependencies files that I had to run for my code to run correctly
+
+# PyTorch + CUDA 11.0
+torch==1.7.1+cu110
+torchvision==0.8.2+cu110
+-f https://download.pytorch.org/whl/torch_stable.html
+
+# timm version compatible with torch 1.7
+timm==0.3.2
+
+# Hugging Face datasets
+datasets
+
+# Logging / visualization
+tensorboard
+
+# Matching numpy & pandas combo (for np.float support)
+numpy==1.19.5
+pandas<1.2

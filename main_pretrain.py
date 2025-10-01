@@ -16,6 +16,10 @@ import os
 import time
 from pathlib import Path
 
+from get_dataset import GalaxyDataset
+from datasets import load_dataset
+
+
 import torch
 import torch.backends.cudnn as cudnn
 from torch.utils.tensorboard import SummaryWriter
@@ -125,7 +129,9 @@ def main(args):
             transforms.RandomHorizontalFlip(),
             transforms.ToTensor(),
             transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])])
-    dataset_train = datasets.ImageFolder(os.path.join(args.data_path, 'train'), transform=transform_train)
+    # dataset_train = datasets.ImageFolder(os.path.join(args.data_path, 'train'), transform=transform_train)
+    hf_ds = load_dataset("matthieulel/galaxy10_decals")
+    dataset_train = GalaxyDataset(hf_ds["train"], transform=transform_train)
     print(dataset_train)
 
     if True:  # args.distributed:
