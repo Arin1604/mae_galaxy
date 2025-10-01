@@ -1,3 +1,5 @@
 data/
 mae_env/
 mae38_env/
+__pycache__/
+output_dir/
