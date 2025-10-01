@@ -9,8 +9,14 @@
 # BEiT: https://github.com/microsoft/unilm/tree/master/beit
 # --------------------------------------------------------
 import math
+import numpy
 import sys
 from typing import Iterable
+from PIL import Image
+import os
+import torchvision.transforms as T
+
+
 
 import torch
 
@@ -22,7 +28,7 @@ def train_one_epoch(model: torch.nn.Module,
                     data_loader: Iterable, optimizer: torch.optim.Optimizer,
                     device: torch.device, epoch: int, loss_scaler,
                     log_writer=None,
-                    args=None):
+                    args=None, tmp_out_dir="./tmp"):
     model.train(True)
     metric_logger = misc.MetricLogger(delimiter="  ")
     metric_logger.add_meter('lr', misc.SmoothedValue(window_size=1, fmt='{value:.6f}'))
@@ -41,11 +47,39 @@ def train_one_epoch(model: torch.nn.Module,
         # we use a per iteration (instead of per epoch) lr scheduler
         if data_iter_step % accum_iter == 0:
             lr_sched.adjust_learning_rate(optimizer, data_iter_step / len(data_loader) + epoch, args)
+        
 
         samples = samples.to(device, non_blocking=True)
+        # print("This is samples")
+        # print(samples.size())
+        
 
         with torch.cuda.amp.autocast():
-            loss, _, _ = model(samples, mask_ratio=args.mask_ratio)
+            loss, pred, mask = model(samples, mask_ratio=args.mask_ratio)
+        
+        # print("This is pred")
+        # print(pred.size())
+        # print("This is mask")
+        # print(mask.size())
+
+        if epoch == 0 and data_iter_step % 100 == 0:
+            # take first image in batch
+            img = samples[0].detach().cpu()
+            #this is rn a tensorflow tensor
+            unnormalize = T.Normalize(
+                mean=[-m/s for m, s in zip([0.5,0.5,0.5],[0.5,0.5,0.5])],
+                std=[1/s for s in [0.5,0.5,0.5]]
+            )
+            # img = unnormalize(img)
+            img = torch.clamp(img, 0, 1)
+
+            # convert tensor to HWC numpy
+            img = T.ToPILImage()(img)
+
+            # save
+            out_path = os.path.join(tmp_out_dir, f"epoch{epoch}_step{data_iter_step}.png")
+            img.save(out_path)
+            print(f"Saved sample image to {out_path}")
 
         loss_value = loss.item()
 

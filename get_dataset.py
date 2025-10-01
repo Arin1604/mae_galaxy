@@ -16,6 +16,44 @@ print(torch.cuda.is_available())  # True if a GPU is detected
 #use this train and test data to initialize your models
 from torch.utils.data import Dataset
 
+
+class Galaxy_Dataset_Loader:
+    def __init__(self):
+        pass
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class GalaxyDataset(Dataset):
     def __init__(self, hf_dataset, transform=None):
         # store the HuggingFace dataset
