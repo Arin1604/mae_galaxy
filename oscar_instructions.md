@@ -11,3 +11,7 @@ export RANK=0
 export LOCAL_RANK=0
 
  python main_pretrain.py --model mae_vit_base_patch16 --data_path . --batch_size 64 --epochs 200 --num_workers 2 --input_size 224 --norm_pix_loss --output_dir ./output_mae_galaxy
+
+  python main_linprobe.py --model mae_vit_base_patch16 --data_path . --batch_size 64 --epochs 200 --nb_classes 10 --num_workers 2 --output_dir ./lin_probe_test
+
+  python main_linprobe.py --model vit_base_patch16 --data_path . --batch_size 8 --epochs 200 --nb_classes 10 --num_workers 2 --output_dir ./lin_probe_test --finetune ./output_mae_galaxy/checkpoint-0.pth

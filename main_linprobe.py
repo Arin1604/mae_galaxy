@@ -35,6 +35,8 @@ from util.lars import LARS
 from util.crop import RandomResizedCrop
 
 import models_vit
+from datasets import load_dataset
+from get_dataset import GalaxyDataset
 
 from engine_finetune import train_one_epoch, evaluate
 
@@ -139,8 +141,22 @@ def main(args):
             transforms.CenterCrop(224),
             transforms.ToTensor(),
             transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])])
-    dataset_train = datasets.ImageFolder(os.path.join(args.data_path, 'train'), transform=transform_train)
-    dataset_val = datasets.ImageFolder(os.path.join(args.data_path, 'val'), transform=transform_val)
+    
+    hf_ds = load_dataset("matthieulel/galaxy10_decals")
+    print("here are the efatures")
+    unique_labels = set(hf_ds["train"]["label"])
+    print(len(unique_labels))   # number of distinct labels
+    print(sorted(unique_labels))  # list of label values
+    # print(hf_ds["train"].features["label"].num_classes)
+    split = hf_ds["train"].train_test_split(0.2)
+    train_ds = split["train"]
+    val_ds = split["test"]
+    dataset_train = GalaxyDataset(train_ds, transform=transform_train)
+    dataset_val = GalaxyDataset(val_ds, transform=transform_val)
+
+    # dataset_train = datasets.ImageFolder(os.path.join(args.data_path, 'train'), transform=transform_train)
+    # dataset_val = datasets.ImageFolder(os.path.join(args.data_path, 'val'), transform=transform_val)
+    # print(f"labels size = {dataset_train.}")
     print(dataset_train)
     print(dataset_val)
 
@@ -197,6 +213,8 @@ def main(args):
         print("Load pre-trained checkpoint from: %s" % args.finetune)
         checkpoint_model = checkpoint['model']
         state_dict = model.state_dict()
+        #note that here head is the ViT head that correspons to the number of classes in our supervised learning task
+        #basically removes all the decoder weights
         for k in ['head.weight', 'head.bias']:
             if k in checkpoint_model and checkpoint_model[k].shape != state_dict[k].shape:
                 print(f"Removing key {k} from pretrained checkpoint")
