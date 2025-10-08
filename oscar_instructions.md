@@ -16,4 +16,9 @@ export LOCAL_RANK=0
 
   python main_linprobe.py --model mae_vit_base_patch16 --data_path . --batch_size 64 --epochs 200 --nb_classes 10 --num_workers 2 --output_dir ./lin_probe_test
 
-  python main_linprobe.py --model vit_base_patch16 --data_path . --batch_size 8 --epochs 200 --nb_classes 10 --num_workers 2 --output_dir ./lin_probe_test --finetune ./output_mae_galaxy/checkpoint-0.pth
+  python main_linprobe.py --model vit_base_patch16 --data_path . --batch_size 8 --epochs 200 --nb_classes 10 --num_workers 2 --output_dir ./lin_probe_no_norm_pix_pre_train --finetune ./output_dir/output_mae_galaxy_no_norm_pix/checkpoint-199.pth
+
+  python main_linprobe.py --model vit_base_patch16 --data_path . --batch_size 8 --epochs 200 --nb_classes 10 --num_workers 2 --output_dir ./lin_probe_with_norm_pix_pre_train_batch64 --finetune ./output_mae_galaxy/checkpoint-199.pth
+
+  
+
