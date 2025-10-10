@@ -13,6 +13,8 @@ import sys
 from typing import Iterable
 
 import torch
+import torchvision.utils as vutils
+import os
 
 import util.misc as misc
 import util.lr_sched as lr_sched
@@ -45,7 +47,38 @@ def train_one_epoch(model: torch.nn.Module,
         samples = samples.to(device, non_blocking=True)
 
         with torch.cuda.amp.autocast():
-            loss, _, _ = model(samples, mask_ratio=args.mask_ratio)
+            loss, pred, mask = model(samples, mask_ratio=args.mask_ratio)
+        
+        if data_iter_step % 500 == 0:  # every 500 iterations
+            save_dir = os.path.join(log_writer.log_dir, "reconstructions")
+            os.makedirs(save_dir, exist_ok=True)
+            # Get reconstructed image
+            reconstructed = model.unpatchify(pred.detach().cpu())
+
+            # Get masked image visualization
+            # 1 = masked, 0 = visible
+            mask = mask.detach().cpu()
+            img = samples.detach().cpu()
+
+            # Convert patches to images for masking visualization
+            N, C, H, W = img.shape
+            p = model.patch_embed.patch_size[0]
+            h = w = H // p
+
+            mask = mask.unsqueeze(-1).repeat(1, 1, p**2 * 3)  # (N, L, p^2 * 3)
+            mask = model.unpatchify(mask)  # (N, 3, H, W)
+            masked_img = img * (1 - mask)  # Zero out masked patches
+            
+            # pick one sample
+            i = 0
+            original = img[i]
+            masked = masked_img[i]
+            recon = reconstructed[i]
+
+            # concatenate horizontally
+            grid = torch.cat([original, masked, recon], dim=2)  # side-by-side
+            vutils.save_image(grid, os.path.join(save_dir, f"epoch{epoch:03d}_iter{data_iter_step:05d}.png"))
+        
 
         loss_value = loss.item()
 
