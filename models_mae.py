@@ -129,7 +129,24 @@ class MaskedAutoencoderViT(nn.Module):
         N, L, D = x.shape  # batch, length, dim
         len_keep = int(L * (1 - mask_ratio))
         
-        noise = torch.rand(N, L, device=x.device)  # noise in [0, 1]
+        H = W = int(L ** 0.5)
+        assert H * W == L, "Patches should form a square grid"
+
+        # --- Create a Gaussian probability map centered in the image ---
+        y = torch.arange(H, device=x.device).float().unsqueeze(1)
+        x_coords = torch.arange(W, device=x.device).float().unsqueeze(0)
+        yc, xc = (H - 1) / 2, (W - 1) / 2
+        sigma = 0.3 * H  # tune this (smaller = more center focus)
+        dist2 = (x_coords - xc) ** 2 + (y - yc) ** 2
+        center_bias = torch.exp(-0.5 * dist2 / (sigma ** 2))
+        center_bias = center_bias.reshape(-1)  # [L]
+        center_bias = center_bias / center_bias.sum()
+
+        # --- For each image, draw random noise but add bias ---
+        # random noise ensures stochasticity; center_bias adds structure
+        noise = torch.rand(N, L, device=x.device)
+        # multiply by (1 - center_bias) so center patches have higher noise on average
+        noise = noise * (1 - center_bias) 
         
         # sort noise for each sample
         ids_shuffle = torch.argsort(noise, dim=1)  # ascend: small is keep, large is remove

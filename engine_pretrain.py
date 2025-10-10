@@ -68,15 +68,20 @@ def train_one_epoch(model: torch.nn.Module,
             mask = mask.unsqueeze(-1).repeat(1, 1, p**2 * 3)  # (N, L, p^2 * 3)
             mask = model.unpatchify(mask)  # (N, 3, H, W)
             masked_img = img * (1 - mask)  # Zero out masked patches
+
             
+                        
             # pick one sample
             i = 0
+            mask_vis = mask[i].clone()  # shape: (3, H, W)
+            mask_vis = mask_vis.mean(dim=0, keepdim=True)  # collapse RGB to 1-channel grayscale
+            mask_vis = mask_vis.repeat(3, 1, 1)  # expand back to 3 channels for saving
             original = img[i]
             masked = masked_img[i]
             recon = reconstructed[i]
 
             # concatenate horizontally
-            grid = torch.cat([original, masked, recon], dim=2)  # side-by-side
+            grid = torch.cat([original, masked, mask_vis, recon], dim=2)  # side-by-side
             vutils.save_image(grid, os.path.join(save_dir, f"epoch{epoch:03d}_iter{data_iter_step:05d}.png"))
         
 
