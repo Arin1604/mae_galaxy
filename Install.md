@@ -43,12 +43,14 @@ The script should automatically handle loading the Galaxy dataset from hugging f
 
 The pre-train command I recommend using:
 
-You can set the --center_masking flag to sample the masks with a center bias.
+You can set the --center_masking flag to sample the masks with a center bias. You can remove it to go back to regular random sampling
 
 ```bash
 python main_pretrain.py --model mae_vit_base_patch16 --center_masking --data_path . --batch_size 64 --epochs 200 --num_workers 2 --input_size 224 --mask_ratio 0.65 --output_dir ./output_dir/pre_train/output_mae_galaxy_065
 ```
 
+Pass the path to your checkpoint after the --finetune argument.
+
 ```bash
-python main_pretrain.py --model mae_vit_base_patch16 --data_path . --batch_size 64 --epochs 200 --num_workers 2 --input_size 224 --mask_ratio 0.65 --output_dir ./output_dir/pre_train/output_mae_galaxy_065
+python main_linprobe.py --model vit_base_patch16 --data_path . --batch_size 32 --epochs 200 --nb_classes 10 --num_workers 2 --output_dir ./output_dir/lin_probe/adam_augmented_lin_probe_no_norm_pix_pre_train_mask0_67 --finetune ./output_dir/pre_train/output_mae_galaxy_no_norm_pix_mask0_67/checkpoint-180.pth
 ```
