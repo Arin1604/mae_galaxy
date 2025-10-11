@@ -88,6 +88,9 @@ def get_args_parser():
     parser.add_argument('--seed', default=0, type=int)
     parser.add_argument('--resume', default='',
                         help='resume from checkpoint')
+    
+    parser.add_argument('--center_masking', action='store_true',
+                    help='enable center masking')
 
     parser.add_argument('--start_epoch', default=0, type=int, metavar='N',
                         help='start epoch')
@@ -125,10 +128,14 @@ def main(args):
 
     # simple augmentation
     transform_train = transforms.Compose([
-            transforms.RandomResizedCrop(args.input_size, scale=(0.2, 1.0), interpolation=3),  # 3 is bicubic
+            # transforms.RandomResizedCrop(args.input_size, scale=(0.8, 1.0), interpolation=3),  # 3 is bicubic
+            transforms.CenterCrop(180),          # crop smaller region
+            transforms.Resize(224), 
+            transforms.RandomRotation(degrees=15),
             transforms.RandomHorizontalFlip(),
             transforms.ToTensor(),
-            transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])])
+            transforms.Lambda(lambda x: torch.log1p(x)),
+            transforms.Normalize(mean=[0.4, 0.4, 0.4], std=[0.2, 0.2, 0.2])])
     # dataset_train = datasets.ImageFolder(os.path.join(args.data_path, 'train'), transform=transform_train)
     hf_ds = load_dataset("matthieulel/galaxy10_decals")
     dataset_train = GalaxyDataset(hf_ds["train"], transform=transform_train)
@@ -146,7 +153,7 @@ def main(args):
 
     if global_rank == 0 and args.log_dir is not None:
         os.makedirs(args.log_dir, exist_ok=True)
-        log_writer = SummaryWriter(log_dir=args.log_dir)
+        log_writer = SummaryWriter(log_dir=args.output_dir)
     else:
         log_writer = None
 

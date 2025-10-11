@@ -47,13 +47,13 @@ def train_one_epoch(model: torch.nn.Module,
         samples = samples.to(device, non_blocking=True)
 
         with torch.cuda.amp.autocast():
-            loss, pred, mask = model(samples, mask_ratio=args.mask_ratio)
+            loss, pred, mask = model(samples, mask_ratio=args.mask_ratio, center_masking=args.center_masking)
         
         if data_iter_step % 500 == 0:  # every 500 iterations
             save_dir = os.path.join(log_writer.log_dir, "reconstructions")
             os.makedirs(save_dir, exist_ok=True)
             # Get reconstructed image
-            reconstructed = model.unpatchify(pred.detach().cpu())
+            reconstructed = model.module.unpatchify(pred.detach().cpu())
 
             # Get masked image visualization
             # 1 = masked, 0 = visible
@@ -62,11 +62,11 @@ def train_one_epoch(model: torch.nn.Module,
 
             # Convert patches to images for masking visualization
             N, C, H, W = img.shape
-            p = model.patch_embed.patch_size[0]
+            p = model.module.patch_embed.patch_size[0]
             h = w = H // p
 
             mask = mask.unsqueeze(-1).repeat(1, 1, p**2 * 3)  # (N, L, p^2 * 3)
-            mask = model.unpatchify(mask)  # (N, 3, H, W)
+            mask = model.module.unpatchify(mask)  # (N, 3, H, W)
             masked_img = img * (1 - mask)  # Zero out masked patches
 
             

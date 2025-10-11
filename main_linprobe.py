@@ -22,6 +22,7 @@ import torch.backends.cudnn as cudnn
 from torch.utils.tensorboard import SummaryWriter
 import torchvision.transforms as transforms
 import torchvision.datasets as datasets
+import torch.optim as optim
 
 import timm
 
@@ -132,7 +133,9 @@ def main(args):
 
     # linear probe: weak augmentation
     transform_train = transforms.Compose([
-            RandomResizedCrop(224, interpolation=3),
+            transforms.CenterCrop(180),          # crop smaller region
+            transforms.Resize(224), 
+            transforms.RandomRotation(degrees=15),
             transforms.RandomHorizontalFlip(),
             transforms.ToTensor(),
             transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])])
@@ -267,7 +270,12 @@ def main(args):
         model = torch.nn.parallel.DistributedDataParallel(model, device_ids=[args.gpu])
         model_without_ddp = model.module
 
-    optimizer = LARS(model_without_ddp.head.parameters(), lr=args.lr, weight_decay=args.weight_decay)
+    # optimizer = LARS(model_without_ddp.head.parameters(), lr=args.lr, weight_decay=args.weight_decay)
+    optimizer = optim.Adam(
+        model_without_ddp.head.parameters(),
+        lr=args.lr,
+        weight_decay=args.weight_decay
+    )
     print(optimizer)
     loss_scaler = NativeScaler()
 

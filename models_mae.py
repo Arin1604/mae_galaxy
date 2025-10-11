@@ -132,21 +132,11 @@ class MaskedAutoencoderViT(nn.Module):
         H = W = int(L ** 0.5)
         assert H * W == L, "Patches should form a square grid"
 
-        # --- Create a Gaussian probability map centered in the image ---
-        y = torch.arange(H, device=x.device).float().unsqueeze(1)
-        x_coords = torch.arange(W, device=x.device).float().unsqueeze(0)
-        yc, xc = (H - 1) / 2, (W - 1) / 2
-        sigma = 0.3 * H  # tune this (smaller = more center focus)
-        dist2 = (x_coords - xc) ** 2 + (y - yc) ** 2
-        center_bias = torch.exp(-0.5 * dist2 / (sigma ** 2))
-        center_bias = center_bias.reshape(-1)  # [L]
-        center_bias = center_bias / center_bias.sum()
-
         # --- For each image, draw random noise but add bias ---
         # random noise ensures stochasticity; center_bias adds structure
         noise = torch.rand(N, L, device=x.device)
         # multiply by (1 - center_bias) so center patches have higher noise on average
-        noise = noise * (1 - center_bias) 
+        # noise = noise * (1 - center_bias) 
         
         # sort noise for each sample
         ids_shuffle = torch.argsort(noise, dim=1)  # ascend: small is keep, large is remove
@@ -163,8 +153,50 @@ class MaskedAutoencoderViT(nn.Module):
         mask = torch.gather(mask, dim=1, index=ids_restore)
 
         return x_masked, mask, ids_restore
+    
+    def random_center_masking(self, x, mask_ratio):
+        """
+        Perform per-sample random masking by per-sample shuffling.
+        Per-sample shuffling is done by argsort random noise.
+        x: [N, L, D], sequence
+        """
+        N, L, D = x.shape
+        len_keep = int(L * (1 - mask_ratio))
 
-    def forward_encoder(self, x, mask_ratio):
+        H = W = int(L ** 0.5)
+        assert H * W == L, "Patches should form a square grid"
+
+        # --- Gaussian probability centered in the image ---
+        y = torch.arange(H, device=x.device).float().unsqueeze(1)
+        x_coords = torch.arange(W, device=x.device).float().unsqueeze(0)
+        yc, xc = (H - 1) / 2, (W - 1) / 2
+        sigma = 0.25 * H  # tune to control center width
+        dist2 = (x_coords - xc) ** 2 + (y - yc) ** 2
+        center_prob = torch.exp(-0.5 * dist2 / (sigma ** 2))
+        center_prob = center_prob.reshape(-1)
+        center_prob = center_prob / center_prob.sum()
+
+        # --- Invert probability so center is LESS likely to be kept ---
+        edge_prob = 1 - center_prob
+        edge_prob = edge_prob / edge_prob.sum()
+
+        # --- Sample patches to KEEP (biased toward edges) ---
+        ids_keep = torch.multinomial(edge_prob.expand(N, -1), len_keep, replacement=False)
+        ids_keep, _ = torch.sort(ids_keep, dim=1)
+
+        # Create binary mask: 0 = keep, 1 = mask
+        mask = torch.ones((N, L), device=x.device)
+        mask.scatter_(1, ids_keep, 0)
+
+        # Create ids_restore (optional for unshuffling)
+        ids_restore = torch.argsort(torch.argsort(mask, dim=1), dim=1)
+
+        # Masked sequence
+        x_masked = torch.gather(x, dim=1, index=ids_keep.unsqueeze(-1).repeat(1, 1, D))
+
+        return x_masked, mask, ids_restore
+
+    def forward_encoder(self, x, mask_ratio, center_masking):
         # embed patches
         x = self.patch_embed(x)
 
@@ -172,7 +204,11 @@ class MaskedAutoencoderViT(nn.Module):
         x = x + self.pos_embed[:, 1:, :]
 
         # masking: length -> length * mask_ratio
-        x, mask, ids_restore = self.random_masking(x, mask_ratio)
+        if center_masking:
+            x, mask, ids_restore = self.random_center_masking(x, mask_ratio)
+        
+        else:
+            x, mask, ids_restore = self.random_masking(x, mask_ratio)
 
         # append cls token
         cls_token = self.cls_token + self.pos_embed[:, :1, :]
@@ -230,8 +266,8 @@ class MaskedAutoencoderViT(nn.Module):
         loss = (loss * mask).sum() / mask.sum()  # mean loss on removed patches
         return loss
 
-    def forward(self, imgs, mask_ratio=0.75):
-        latent, mask, ids_restore = self.forward_encoder(imgs, mask_ratio)
+    def forward(self, imgs, mask_ratio=0.75, center_masking=False):
+        latent, mask, ids_restore = self.forward_encoder(imgs, mask_ratio, center_masking)
         pred = self.forward_decoder(latent, ids_restore)  # [N, L, p*p*3]
         loss = self.forward_loss(imgs, pred, mask)
         return loss, pred, mask

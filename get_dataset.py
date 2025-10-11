@@ -1,17 +1,13 @@
 from datasets import load_dataset
 from torchvision import transforms
 from torch.utils.data import Dataset
+import torch
+
 
 import torch
 print(torch.version.cuda)   # prints CUDA version PyTorch was built with
 print(torch.cuda.is_available())  # True if a GPU is detected
 
-
-
-
-#i wanna now use this dataset to train the MAE model
-
-#train, test = ds['train'].train_test_split(test_size=0.2, shuffle=True)
 
 #use this train and test data to initialize your models
 from torch.utils.data import Dataset
@@ -59,5 +55,10 @@ class Galaxy_Dataset(Dataset):
 
 
 
-dataset = Galaxy_Dataset("matthieulel/galaxy10_decals")
-dataset.init_loaders()
+# transform_train = transforms.Compose([
+#             transforms.RandomResizedCrop(args.input_size, scale=(0.7, 1.0), interpolation=3),  # 3 is bicubic
+#             transforms.RandomHorizontalFlip(),
+#             transforms.ToTensor(),
+#             transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])])
+    # dataset_train = datasets.ImageFolder(os.path.join(args.data_path, 'train'), transform=transform_train)
+
