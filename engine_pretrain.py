@@ -83,6 +83,8 @@ def train_one_epoch(model: torch.nn.Module,
             # concatenate horizontally
             grid = torch.cat([original, masked, mask_vis, recon], dim=2)  # side-by-side
             vutils.save_image(grid, os.path.join(save_dir, f"epoch{epoch:03d}_iter{data_iter_step:05d}.png"))
+            #vutils.save_image(original, os.path.join(save_dir, f"epoch{epoch:03d}_iter{data_iter_step:05d}.png"))
+
         
 
         loss_value = loss.item()
