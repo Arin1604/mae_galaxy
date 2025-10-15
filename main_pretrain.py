@@ -117,13 +117,18 @@ def main(args):
     print('job dir: {}'.format(os.path.dirname(os.path.realpath(__file__))))
     print("{}".format(args).replace(', ', ',\n'))
 
+    #gets the GPU/CPU for our torch
     device = torch.device(args.device)
 
     # fix the seed for reproducibility
-    seed = args.seed + misc.get_rank()
+    #this makes sure that the initial set of random weights and biases are deterministic
+    #seed = args.seed + misc.get_rank()
+    #hard code for time being
+    seed = 42
     torch.manual_seed(seed)
     np.random.seed(seed)
 
+    #Learn more about this!
     cudnn.benchmark = True
 
     # simple augmentation
